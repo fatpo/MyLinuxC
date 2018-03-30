@@ -1,6 +1,7 @@
 # MyLinuxC
 专门存放学习Linux中遇到的著名算法
 * [信号量](#信号量)  
+* [银行家算法](#银行家算法)  
 
 # 信号量
 
@@ -69,3 +70,117 @@ XXOOXXXXXXXXOOOOOOOO
 76876 - finished
 ```
 很好，这下子stdout资源在PV控制下有序输出。
+
+# 银行家算法
+
+
+思想：
+```
+你借出去的钱，也算是自己的钱。
+如果你手上的钱能满足借你钱的那个人的资金需求，那么它的钱就连本带利还给你。  
+```
+
+以下来自维基百科：假设四个进程。  
+```
+Available：系统当前拥有的资源。  
+Allocation：进程已经拥有的资源。  
+Max：进程需要的资源。 
+ 
+
+ Allocation　　　Max　　　Available
+ 　　ＡＢＣＤ　　ＡＢＣＤ　　ＡＢＣＤ
+ P1　００１４　　０６５６　　１５２０　
+ P2　１４３２　　１９４２　
+ P3　１３５４　　１３５６
+ P4　１０００　　１７５０
+```
+计算出四个进程的Need资源：
+```
+ NEED
+ ＡＢＣＤ
+ ０６４２　
+ ０５１０
+ ０００２
+ ０７５０
+```
+四个进程的处理结果初始化：
+```
+ FINISH
+ false
+ false
+ false
+ false
+```
+接下来找出need比available小的(千万不能把它当成4位数 他是4个不同的数)
+```
+   NEED　　Available
+ ＡＢＣＤ　　ＡＢＣＤ
+ ０６４２　　１５２０
+ ０５１０<-
+ ０００２
+ ０７５０
+```
+P2的需求小于能用的，所以配置给他再回收
+```
+  NEED　　Available
+ ＡＢＣＤ　　ＡＢＣＤ
+ ０６４２　　１５２０
+ ００００　＋１４３２
+ ０００２－－－－－－－
+ ０７５０　　２９５２
+ ```
+此时P2 FINISH的false要改成true(己完成)
+```
+ FINISH
+ false
+ true
+ false
+ false
+ ```
+接下来继续往下找，发现P3的需求为0002，小于能用的2952，所以资源配置给他再回收
+```
+ 　NEED　　Available
+ ＡＢＣＤ　　Ａ　Ｂ　Ｃ　Ｄ
+ ０６４２　　２　９　５　２
+ ００００　＋１　３　５　４
+ ００００－－－－－－－－－－
+ ０７５０　　３　12　10　6
+ ```
+同样的将P3的false改成true
+```
+ FINISH
+ false
+ true
+ true
+ false
+ ```
+依此类推，做完P4→P1，当全部的FINISH都变成true时，就是安全状态。  
+
+
+代码结果：
+```
+(chanzai_data_venv) ➜  MyLinuxC git:(master) ✗ python Dijkstra_1965_banker.py
+比较，need=[7, 4, 3], Available=[3, 3, 2]
+比较不通过，跳过...
+比较，need=[1, 2, 2], Available=[3, 3, 2]
+比较通过，资源回归..
+回归后, Available=[5, 3, 2]
+比较，need=[6, 0, 0], Available=[5, 3, 2]
+比较不通过，跳过...
+比较，need=[0, 1, 1], Available=[5, 3, 2]
+比较通过，资源回归..
+回归后, Available=[7, 4, 3]
+比较，need=[4, 3, 1], Available=[7, 4, 3]
+比较通过，资源回归..
+回归后, Available=[7, 4, 5]
+比较，need=[7, 4, 3], Available=[7, 4, 5]
+比较通过，资源回归..
+回归后, Available=[7, 5, 5]
+比较，need=[6, 0, 0], Available=[7, 5, 5]
+比较通过，资源回归..
+回归后, Available=[10, 5, 7]
+检查通过
+正确的任务顺序： [1, 3, 4, 0, 2]
+(chanzai_data_venv) ➜  MyLinuxC git:(master) ✗ 
+
+```
